@@ -12,16 +12,21 @@
 
 MechVentilation::MechVentilation(
     ApolloHal *hal,
-    ApolloConfiguration *configuration)
+    ApolloConfiguration *configuration) :
+    _pidPressure(&_currentPressure, &_inputValvePercent, &_targetPressure, _consKp, _consKi, _consKd, DIRECT)
 {
     this->hal = hal;
     this->configuration = configuration;
     this->configurationUpdate();
     this->_currentState = State::Wait;
+    _pidPressure.SetMode(AUTOMATIC);
 }
 
 void MechVentilation::update(void)
 {
+    _currentPressure = hal->pressuresSensor()->readCMH2O();
+    pidCompute();
+
     switch (_currentState)
     {
     case State::Wait:
@@ -113,9 +118,11 @@ void MechVentilation::insuflationBefore()
      *  @todo Decir a la válvula que se abra
      *
     */
+    this->hal->exitValve()->close();
     this->hal->intakeFlowSensor()->resetFlow();
-    this->hal->valveExsClose();
-    this->hal->valveInsOpen();
+    _inputValvePercent = 100;
+    this->hal->intakeValve()->open(_inputValvePercent);
+    _targetPressure = 40;
     this->stateNext();
 }
 void MechVentilation::insufaltionProcess()
@@ -126,43 +133,44 @@ void MechVentilation::insufaltionProcess()
     switch (this->mode)
     {
     case Mode::Presion:
-        if (this->hal->getPresureIns() > this->_cfgPresionPico)
-        {
-            this->hal->valveInsClose();
-        }
+
+//        if (this->hal->getPresureIns() > this->_cfgPresionPico)
+//        {
+//            this->hal->valveInsClose();
+//        }
         break;
     case Mode::Flow:
-#ifdef INTFLOWSENSOR
-        if (this->hal->intakeFlowSensor()->getFlow() >= this->_cfgmlTidalVolume)
-        {
-            this->stateNext();
-        }
-#endif
+//        if (this->hal->intakeFlowSensor()->getFlow() >= this->_cfgmlTidalVolume)
+//        {
+//            this->stateNext();
+//        }
         break;
     }
     if ((now - this->lastExecution) >= (this->_cfgSecTimeInsufflation * 1000))
     {
         this->stateNext();
     }
-    if (this->hal->getPresureIns() > DEFAULT_CMH20_MAX)
-    {
+//    if (this->hal->getPresureIns() > DEFAULT_CMH20_MAX)
+//    {
         // @todo Alerta por sobrepresion
-        this->hal->valveInsClose();
-    }
+        //this->hal->valveInsClose();
+//    }
 }
 void MechVentilation::insuflationAfter()
 {
     unsigned long now = millis();
     if ((now - this->lastExecution) >= (this->_cfgSecTimeInsufflation * 1000))
     {
-        this->hal->valveInsClose();
+        _inputValvePercent = 50;
+        this->hal->intakeValve()->open(_inputValvePercent);
+        _targetPressure = 20;
         this->stateNext();
     }
 }
 void MechVentilation::exsufflationBefore()
 {
     /** @todo Abrimos válvulas de salida */
-    this->hal->valveExsOpen();
+    this->hal->exitValve()->open(100);
     stateNext();
 }
 void MechVentilation::exsufflationProcess()
@@ -175,18 +183,18 @@ void MechVentilation::exsufflationProcess()
     /**
      * Control de la presión de salida para prevenir baja presión PEEP
      */
-    if (this->hal->getPresureExp() <= this->_cfgPresionPeep)
-    {
-        this->hal->valveExsClose();
-        stateNext();
-    }
+//    if (this->hal->getPresureExp() <= this->_cfgPresionPeep)
+//    {
+//        this->hal->valveExsClose();
+//        stateNext();
+//    }
 
     //Detecta aspiración del paciente
-    if (this->hal->getPresureIns() <= this->_cfgCmh2oTriggerValue)
-    {
+//    if (this->hal->getPresureIns() <= this->_cfgCmh2oTriggerValue)
+//    {
         /** @todo Pendiente desarrollo */
-        _setState(State::InsuflationBefore);
-    }
+//        _setState(State::InsuflationBefore);
+//    }
 }
 void MechVentilation::exsufflationAfter()
 {
@@ -222,4 +230,27 @@ void MechVentilation::configurationUpdate()
 
     this->calcularCiclo();
     this->configuration->resetUpdated();
+}
+
+
+////JAvi testing
+
+void MechVentilation::pidCompute()
+{
+//  if()
+//  {
+    double gap = abs(_targetPressure - _currentPressure); //distance away from setpoint
+    if (gap < 5)
+    {  //we're close to setpoint, use conservative tuning parameters
+      _pidPressure.SetTunings(_consKp, _consKi, _consKd);
+    }
+    else
+    {
+       //we're far from setpoint, use aggressive tuning parameters
+       _pidPressure.SetTunings(_aggKp, _aggKi, _aggKd);
+    }
+    _pidPressure.Compute();
+    if(_inputValvePercent > 100) _inputPercent = 100;
+    hal->intakeValve()->open(_inputValvePercent);
+//  }
 }

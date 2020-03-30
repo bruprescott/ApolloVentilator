@@ -10,6 +10,7 @@ Comunications::Comunications(ApolloConfiguration *config)
 void Comunications::send(String msg)
 {
     Serial.println(String(msg));
+    Serial.flush();
 }
 
 void Comunications::alert(String msg)
@@ -25,8 +26,10 @@ void Comunications::data(String msg[], uint8_t size)
     {
         msgs += "," + msg[i];
     }
-    send("DATA:" + msgs);
+    //send("DATA:" + msgs);
+    send(msgs);
 }
+
 void Comunications::debug(String module, String msg)
 {
     send("DEBUG:" + module + ":" + msg);

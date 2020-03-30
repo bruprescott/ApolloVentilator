@@ -11,6 +11,7 @@ class ApolloValve
         virtual void    open(uint8_t percent = 100) {;}
         virtual void    close()                     {;}
         virtual uint8_t status()                    {return 0;}
+        virtual bool    isOpen()                    {return status() > 0;}
         virtual void    update()                    {;}
     protected:
 };

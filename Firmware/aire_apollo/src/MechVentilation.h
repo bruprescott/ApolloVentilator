@@ -9,6 +9,7 @@
 #ifndef INC_MECHANICAL_VENTILATION_H
 #define INC_MECHANICAL_VENTILATION_H
 
+#include <PID_v1.h>
 #include <inttypes.h>
 #include "defaults.h"
 #include "ApolloHal.h"
@@ -74,6 +75,20 @@ public:
      */
     void update(void);
 
+    void setInputPercent(uint8_t p)
+    {
+      if(p > 100) p = 100;
+      if(p <   0) p = 0;
+      _inputPercent = p;
+    }
+
+    void setOutputPercent(uint8_t p)
+    {
+      if(p > 100) p = 100;
+      if(p <   0) p = 0;
+      _outputPercent = p;
+    }
+
 private:
     /** Initialization. */
     void _init(
@@ -88,6 +103,22 @@ private:
     ApolloHal *hal;
 
     ApolloConfiguration *configuration;
+
+
+//Javi - testing
+    uint8_t _inputPercent  = 100;
+    uint8_t _outputPercent = 100;
+    void    pidCompute();
+
+    double _targetPressure, _currentPressure, _inputValvePercent;
+    //Define the aggressive and conservative Tuning Parameters
+    double _aggKp=5 , _aggKi=0.2  , _aggKd=1;
+    double _consKp=1, _consKi=0.05, _consKd=0.25;
+    //Specify the links and initial tuning parameters
+    PID _pidPressure;
+
+/////
+
 
     /** Tidal volume in millilitres. */
     float _cfgmlTidalVolume;
@@ -126,6 +157,8 @@ private:
 
     unsigned long lastExecution = 0;
 
+
+
     void wait();
     void insuflationBefore();
     void insufaltionProcess();
@@ -139,6 +172,9 @@ private:
     void calcularCiclo();
 
     void configurationUpdate();
+
+
+
 };
 
 #endif /* INC_MECHANICAL_VENTILATION_H */

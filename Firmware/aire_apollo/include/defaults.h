@@ -4,8 +4,8 @@
 #define LOG_INTERVAL 100 //milliseconds
 
 //------HardWare---------
-#define ENTRY_EV_PIN 10 //ElectroValvula - Entrada  - Soplador de Aire
-//#define ENTRY_EV_PIN    9 //ElectroValvula - Entrada    - Compresor
+//#define ENTRY_EV_PIN 10 //ElectroValvula - Entrada  - Soplador de Aire
+#define ENTRY_EV_PIN    9 //ElectroValvula - Entrada    - Compresor
 #define EXIT_EV_PIN 8    //ElectroValvula - Salida
 #define ENTRY_FLOW_PIN 3 //Sensor de Flujo - Entrada
 #define EXIT_FLOW_PIN 4  //Sendor de Flujo - Salida
@@ -43,8 +43,8 @@
 #define DEFAULT_CMH20_MAX 50    //Presión máxima de seguridad
 #define DEFAULT_CMH20_PICO 45   //Presión máxima regular
 #define DEFAULT_CMH20_MESETA 32 //Presión mínima al insuflar
-//#define DEFAULT_CMH20_PEEP 14 //Presión mínima en el vaciado
-#define DEFAULT_CMH20_PEEP -1   //Presión mínima en el vaciado //HAck para funcionar sin suministro de aire!
+#define DEFAULT_CMH20_PEEP 14 //Presión mínima en el vaciado
+//#define DEFAULT_CMH20_PEEP -1   //Presión mínima en el vaciado //HAck para funcionar sin suministro de aire!
 
 #define DEFAULT_WEIGHT 80
 #define DEFAULT_HEIGHT 170

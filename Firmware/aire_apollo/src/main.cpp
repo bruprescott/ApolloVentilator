@@ -18,7 +18,7 @@
 
 #define DEBUG         //Activar mensajes debug
 #define INTFLOWSENSOR //Activar para usar los sensores de flujo por interrupcion.
-//#define LOCALCONTROLS // Display y encoders presentes.
+#define LOCALCONTROLS // Display y encoders presentes.
 
 #include "Arduino.h"
 #include <Wire.h>
@@ -26,6 +26,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <MsTimer2.h>
+#include <PID_v1.h>
+
 
 #include "trace.h"
 #include "ApolloHal.h"
@@ -88,15 +90,18 @@ void flowOut()
 void logData()
 {
   String pressure(hal->pressuresSensor()->readCMH2O());
-  String intakeFlow(hal->intakeFlowSensor()->getFlow());
+//  String intakeFlow(hal->intakeFlowSensor()->getFlow());
+  String intakeFlow(0);
 ///  String exitFlow(hal->exitFlowSensor()->getFlow());
-  String exitFlow(hal->intakeFlowSensor()->getFlow());
+  String exitFlow(0);
   String intakeInstantFlow(hal->intakeFlowSensor()->getInstantFlow());
 //  String exitInstantFlow(hal->exitFlowSensor()->getInstantFlow());
-  String exitInstantFlow(hal->intakeFlowSensor()->getInstantFlow());
+  String exitInstantFlow(0);
+  String intakeValve(hal->intakeValve()->status());
+  String ExitValve(hal->exitValve()->status());
 
-  String data[] = {pressure, intakeFlow, exitFlow, intakeInstantFlow, exitInstantFlow};
-  com.data(data, 5);
+  String data[] = {pressure,intakeInstantFlow,exitInstantFlow,intakeFlow,exitFlow,intakeValve,ExitValve};
+  com.data(data, 7);
 }
 
 void setup()
@@ -118,8 +123,8 @@ void setup()
   ApolloFlowSensor *fInSensor = new MksmFlowSensor();
   ApolloFlowSensor *fOutSensor = new MksmFlowSensor();
   ApolloPressureSensor *pSensor = new mksBME280(BME280_ADDR);
-  ApolloValve *inValve = new MksmValve(ENTRY_EV_PIN);
-  ApolloValve *outValve = new MksmValve(EXIT_EV_PIN);
+  ApolloValve *inValve = new MksmValve(ENTRY_EV_PIN,12,6);
+  ApolloValve *outValve = new MksmValve(EXIT_EV_PIN,6,3);
 
   hal = new ApolloHal(pSensor, fInSensor, fOutSensor, inValve, outValve);
 
@@ -156,6 +161,9 @@ void setup()
   TRACE("SETUP COMPLETED!");
 }
 
+int inputPercent  = 100;
+int outputPercent = 100;
+
 void loop()
 {
 
@@ -186,6 +194,7 @@ void loop()
 
 
 #ifdef LOCALCONTROLS
+/*
   if (encoderRPM.updateValue(&rpm))
   {
     configuration->setRpm(rpm);
@@ -201,6 +210,28 @@ void loop()
     configuration->setPorcentajeInspiratorio(porcentajeInspiratorio);
     display.writeLine(3, "% Insp: " + String(configuration->getPorcentajeInspiratorio()));
   }
+*/
+
+if (encoderRPM.updateValue(&inputPercent))
+{
+  ventilation->setInputPercent(inputPercent);
+  display.writeLine(3, "input: " + String(inputPercent) + "%     ");
+}
+
+if (encoderPorcInspira.updateValue(&outputPercent))
+{
+  ventilation->setOutputPercent(outputPercent);
+  display.writeLine(3, "out: " + String(outputPercent)+ "%     ");
+}
+
+if (encoderTidal.updateValue(&vTidal, 10))
+{
+  configuration->setTidalVolume(vTidal);
+  display.writeLine(1, "Vol Tidal: " + String(configuration->getMlTidalVolumen()));
+}
+
+
+
   if (com.serialRead())
   {
     display.writeLine(0, "RPM: " + String(configuration->getRpm()));
