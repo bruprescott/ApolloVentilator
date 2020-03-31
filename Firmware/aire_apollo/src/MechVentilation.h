@@ -75,20 +75,6 @@ public:
      */
     void update(void);
 
-    void setInputPercent(uint8_t p)
-    {
-      if(p > 100) p = 100;
-      if(p <   0) p = 0;
-      _inputPercent = p;
-    }
-
-    void setOutputPercent(uint8_t p)
-    {
-      if(p > 100) p = 100;
-      if(p <   0) p = 0;
-      _outputPercent = p;
-    }
-
 private:
     /** Initialization. */
     void _init(
@@ -106,14 +92,13 @@ private:
 
 
 //Javi - testing
-    uint8_t _inputPercent  = 100;
-    uint8_t _outputPercent = 100;
+
     void    pidCompute();
 
     double _targetPressure, _currentPressure, _inputValvePercent;
     //Define the aggressive and conservative Tuning Parameters
-    double _aggKp=5 , _aggKi=0.2  , _aggKd=1;
-    double _consKp=1, _consKi=0.05, _consKd=0.25;
+    double _aggKp,_aggKi,_aggKd;
+    double _consKp,_consKi,_consKd;
     //Specify the links and initial tuning parameters
     PID _pidPressure;
 

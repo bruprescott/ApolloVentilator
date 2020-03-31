@@ -214,13 +214,13 @@ void loop()
 
 if (encoderRPM.updateValue(&inputPercent))
 {
-  ventilation->setInputPercent(inputPercent);
+//  ventilation->setInputPercent(inputPercent);
   display.writeLine(3, "input: " + String(inputPercent) + "%     ");
 }
 
 if (encoderPorcInspira.updateValue(&outputPercent))
 {
-  ventilation->setOutputPercent(outputPercent);
+//  ventilation->setOutputPercent(outputPercent);
   display.writeLine(3, "out: " + String(outputPercent)+ "%     ");
 }
 

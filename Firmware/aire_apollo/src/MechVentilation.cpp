@@ -15,6 +15,8 @@ MechVentilation::MechVentilation(
     ApolloConfiguration *configuration) :
     _pidPressure(&_currentPressure, &_inputValvePercent, &_targetPressure, _consKp, _consKi, _consKd, DIRECT)
 {
+    _aggKp=2 , _aggKi=0.1  , _aggKd=0.5;
+    _consKp=0.25, _consKi=0.02, _consKd=0.10;
     this->hal = hal;
     this->configuration = configuration;
     this->configurationUpdate();
@@ -120,9 +122,11 @@ void MechVentilation::insuflationBefore()
     */
     this->hal->exitValve()->close();
     this->hal->intakeFlowSensor()->resetFlow();
+
+    _targetPressure = 40;
     _inputValvePercent = 100;
     this->hal->intakeValve()->open(_inputValvePercent);
-    _targetPressure = 40;
+    pidCompute();
     this->stateNext();
 }
 void MechVentilation::insufaltionProcess()
@@ -161,9 +165,10 @@ void MechVentilation::insuflationAfter()
     unsigned long now = millis();
     if ((now - this->lastExecution) >= (this->_cfgSecTimeInsufflation * 1000))
     {
-        _inputValvePercent = 50;
+        _targetPressure = 15;
+        _inputValvePercent = 20;
         this->hal->intakeValve()->open(_inputValvePercent);
-        _targetPressure = 20;
+        pidCompute();
         this->stateNext();
     }
 }
@@ -250,7 +255,7 @@ void MechVentilation::pidCompute()
        _pidPressure.SetTunings(_aggKp, _aggKi, _aggKd);
     }
     _pidPressure.Compute();
-    if(_inputValvePercent > 100) _inputPercent = 100;
+    if(_inputValvePercent > 100) _inputValvePercent = 100;
     hal->intakeValve()->open(_inputValvePercent);
 //  }
 }
