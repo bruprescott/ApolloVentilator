@@ -16,7 +16,8 @@ MechVentilation::MechVentilation(
     _pidPressure(&_currentPressure, &_inputValvePercent, &_targetPressure, _consKp, _consKi, _consKd, DIRECT)
 {
     _aggKp=2 , _aggKi=0.1  , _aggKd=0.5;
-    _consKp=0.25, _consKi=0.02, _consKd=0.10;
+    _consKp=5, _consKi=0.05, _consKd=0.10;
+    _pidPressure.SetTunings(_consKp, _consKi, _consKd);
     this->hal = hal;
     this->configuration = configuration;
     this->configurationUpdate();
@@ -244,6 +245,7 @@ void MechVentilation::pidCompute()
 {
 //  if()
 //  {
+/*
     double gap = abs(_targetPressure - _currentPressure); //distance away from setpoint
     if (gap < 5)
     {  //we're close to setpoint, use conservative tuning parameters
@@ -254,8 +256,12 @@ void MechVentilation::pidCompute()
        //we're far from setpoint, use aggressive tuning parameters
        _pidPressure.SetTunings(_aggKp, _aggKi, _aggKd);
     }
+*/
+    _currentPressure = hal->pressuresSensor()->readCMH2O();
     _pidPressure.Compute();
+    Serial.println("PID: current:" + String(_currentPressure) + " Target:"  + String(_targetPressure) + " Output:" + String(_inputValvePercent) );
     if(_inputValvePercent > 100) _inputValvePercent = 100;
     hal->intakeValve()->open(_inputValvePercent);
+
 //  }
 }

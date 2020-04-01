@@ -74,6 +74,12 @@ public:
      * @note This method must be called on the main loop.
      */
     void update(void);
+    void setTargetPressure(float p)
+    {
+      _targetPressure = p;
+    }
+    void    pidCompute();
+
 
 private:
     /** Initialization. */
@@ -92,8 +98,6 @@ private:
 
 
 //Javi - testing
-
-    void    pidCompute();
 
     double _targetPressure, _currentPressure, _inputValvePercent;
     //Define the aggressive and conservative Tuning Parameters

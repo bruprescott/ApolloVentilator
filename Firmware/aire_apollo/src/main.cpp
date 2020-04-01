@@ -159,6 +159,10 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(EXIT_FLOW_PIN), flowOut, RISING);
 #endif
   TRACE("SETUP COMPLETED!");
+  hal->exitValve()->open();
+  hal->intakeValve()->open();
+  ventilation->setTargetPressure(20);
+
 }
 
 int inputPercent  = 100;
@@ -188,9 +192,10 @@ void loop()
   // envio de datos
 
 //  if (millis() % LOG_INTERVAL == 0)
-    logData();
+//    logData();
   // gestion del ventilador
-  ventilation->update();
+//  ventilation->update();
+    ventilation->pidCompute();
 
 
 #ifdef LOCALCONTROLS
@@ -221,16 +226,15 @@ if (encoderRPM.updateValue(&inputPercent))
 if (encoderPorcInspira.updateValue(&outputPercent))
 {
 //  ventilation->setOutputPercent(outputPercent);
+  ventilation->setTargetPressure(outputPercent);
   display.writeLine(3, "out: " + String(outputPercent)+ "%     ");
 }
 
 if (encoderTidal.updateValue(&vTidal, 10))
 {
-  configuration->setTidalVolume(vTidal);
+//  configuration->setTidalVolume(vTidal);
   display.writeLine(1, "Vol Tidal: " + String(configuration->getMlTidalVolumen()));
 }
-
-
 
   if (com.serialRead())
   {
