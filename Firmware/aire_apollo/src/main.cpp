@@ -27,12 +27,16 @@
 #include <Adafruit_BME280.h>
 #include <MsTimer2.h>
 #include <PID_v1.h>
+#include <PID_AutoTune_v0.h>
+#include <Servo.h>
 
 
 #include "trace.h"
 #include "ApolloHal.h"
 #include "mksBME280.h"
-#include "MksmValve.h"
+#include "cheapValve.h"
+#include "pwmValve.h"
+#include "servoValve.h"
 #include "MksmFlowSensor.h"
 #include "Comunications.h"
 #include "MechVentilation.h"
@@ -50,8 +54,8 @@ Comunications com = Comunications(configuration);
 MechVentilation *ventilation;
 
 #ifdef LOCALCONTROLS
-ApolloEncoder encoderRPM(PIN_ENC_RPM_DT, PIN_ENC_RPM_CLK, PIN_ENC_RPM_SW);
-ApolloEncoder encoderTidal(PIN_ENC_TIDAL_DT, PIN_ENC_TIDAL_CLK, PIN_ENC_TIDAL_SW);
+ApolloEncoder encoderRPM        (PIN_ENC_RPM_DT, PIN_ENC_RPM_CLK, PIN_ENC_RPM_SW);
+ApolloEncoder encoderTidal      (PIN_ENC_TIDAL_DT, PIN_ENC_TIDAL_CLK, PIN_ENC_TIDAL_SW);
 ApolloEncoder encoderPorcInspira(PIN_ENC_PCTINS_DT, PIN_ENC_PCTINS_CLK, PIN_ENC_PCTINS_SW);
 Display display = Display();
 #endif
@@ -90,18 +94,43 @@ void flowOut()
 void logData()
 {
   String pressure(hal->pressuresSensor()->readCMH2O());
-//  String intakeFlow(hal->intakeFlowSensor()->getFlow());
-  String intakeFlow(0);
-///  String exitFlow(hal->exitFlowSensor()->getFlow());
+  String intakeFlow(hal->intakeFlowSensor()->getFlow());
+  //String intakeFlow(0);
+//  String exitFlow(hal->exitFlowSensor()->getFlow());
   String exitFlow(0);
   String intakeInstantFlow(hal->intakeFlowSensor()->getInstantFlow());
-//  String exitInstantFlow(hal->exitFlowSensor()->getInstantFlow());
+  //String exitInstantFlow(hal->exitFlowSensor()->getInstantFlow());
+  //String intakeInstantFlow(0);
   String exitInstantFlow(0);
-  String intakeValve(hal->intakeValve()->status());
+  String intakeValve(hal->exitValve()->status());
+//  String intakeValve(hal->intakeValve()->status());
   String ExitValve(hal->exitValve()->status());
 
   String data[] = {pressure,intakeInstantFlow,exitInstantFlow,intakeFlow,exitFlow,intakeValve,ExitValve};
   com.data(data, 7);
+}
+
+void setRampsPWMFreq()
+{
+  /*
+  timer 0 (controls pin 13, 4);
+  timer 1 (controls pin 12, 11);
+  timer 2 (controls pin 10, 9);
+  timer 3 (controls pin 5, 3, 2);
+  timer 4 (controls pin 8, 7, 6);
+
+    prescaler = 1 ---> PWM frequency is 31000 Hz
+    prescaler = 2 ---> PWM frequency is 4000 Hz
+    prescaler = 3 ---> PWM frequency is 490 Hz (default value)
+    prescaler = 4 ---> PWM frequency is 120 Hz
+    prescaler = 5 ---> PWM frequency is 30 Hz
+    prescaler = 6 ---> PWM frequency is <20 Hz
+
+  */
+  int myEraser = 7;             // this is 111 in binary and is used as an eraser
+  TCCR2B &= ~myEraser;   // this operation (AND plus NOT),  set the three bits in TCCR2B to 0
+  int myPrescaler = 3;         // this could be a number in [1 , 6]. In this case, 3 corresponds in binary to 011.
+  TCCR2B |= myPrescaler;  //this operation (OR), replaces the last three bits in TCCR2B with our new value 011
 }
 
 void setup()
@@ -123,9 +152,9 @@ void setup()
   ApolloFlowSensor *fInSensor = new MksmFlowSensor();
   ApolloFlowSensor *fOutSensor = new MksmFlowSensor();
   ApolloPressureSensor *pSensor = new mksBME280(BME280_ADDR);
-  ApolloValve *inValve = new MksmValve(ENTRY_EV_PIN,12,6);
-  ApolloValve *outValve = new MksmValve(EXIT_EV_PIN,6,3);
-
+  ApolloValve *inValve = new cheapValve(ENTRY_EV_PIN,30,10);
+//  ApolloValve *outValve = new cheapValve(EXIT_EV_PIN,20,3);
+  ApolloValve *outValve = new servoValve(11);
   hal = new ApolloHal(pSensor, fInSensor, fOutSensor, inValve, outValve);
 
   TRACE("BEGIN HAL!");
@@ -144,10 +173,10 @@ void setup()
 #ifdef LOCALCONTROLS
   display.init();
   display.clear();
-  display.writeLine(0, "RPM: " + String(configuration->getRpm()));
-  display.writeLine(1, "Vol Tidal: " + String(configuration->getMlTidalVolumen()));
+  display.writeLine(0, "RPM: "        + String(configuration->getRpm()));
+  display.writeLine(1, "Vol Tidal: "  + String(configuration->getMlTidalVolumen()));
   display.writeLine(2, "Press PEEP: " + String(configuration->getPressionPeep()));
-  display.writeLine(3, "% Insp: " + String(configuration->getPorcentajeInspiratorio()));
+  display.writeLine(3, "% Insp: "     + String(configuration->getPorcentajeInspiratorio()));
 #endif
 
   //ISRs
@@ -161,12 +190,13 @@ void setup()
   TRACE("SETUP COMPLETED!");
   hal->exitValve()->open();
   hal->intakeValve()->open();
-  ventilation->setTargetPressure(20);
+//  ventilation->setTargetPressure(15);
 
 }
 
-int inputPercent  = 100;
-int outputPercent = 100;
+float pot1  = 5.0;
+float pot2  = 0.01;
+float pot3  = 0.1;
 
 void loop()
 {
@@ -192,10 +222,10 @@ void loop()
   // envio de datos
 
 //  if (millis() % LOG_INTERVAL == 0)
-//    logData();
+    logData();
   // gestion del ventilador
-//  ventilation->update();
-    ventilation->pidCompute();
+  ventilation->update();
+//    ventilation->pidCompute();
 
 
 #ifdef LOCALCONTROLS
@@ -217,32 +247,38 @@ void loop()
   }
 */
 
-if (encoderRPM.updateValue(&inputPercent))
+
+if (encoderRPM.updateValue(&pot1,1))
 {
-//  ventilation->setInputPercent(inputPercent);
-  display.writeLine(3, "input: " + String(inputPercent) + "%     ");
+  display.writeLine(3, "P: " + String(pot1) + "%     ");
+  ventilation->setP(pot1);
+  //hal->intakeValve()->open(pot1);
+//  hal->exitValve()->open(pot1);
+
 }
 
-if (encoderPorcInspira.updateValue(&outputPercent))
+if (encoderPorcInspira.updateValue(&pot2,0.01))
 {
-//  ventilation->setOutputPercent(outputPercent);
-  ventilation->setTargetPressure(outputPercent);
-  display.writeLine(3, "out: " + String(outputPercent)+ "%     ");
+  display.writeLine(3, "I: " + String(pot2)+ "%     ");
+  ventilation->setI(pot2);
+
 }
 
-if (encoderTidal.updateValue(&vTidal, 10))
+if (encoderTidal.updateValue(&pot3,0.01))
 {
-//  configuration->setTidalVolume(vTidal);
-  display.writeLine(1, "Vol Tidal: " + String(configuration->getMlTidalVolumen()));
+  display.writeLine(3, "D: " + String(pot3)+ "%     ");
+  ventilation->setD(pot3);
 }
+
 
   if (com.serialRead())
   {
-    display.writeLine(0, "RPM: " + String(configuration->getRpm()));
-    display.writeLine(1, "Vol Tidal: " + String(configuration->getMlTidalVolumen()));
-    display.writeLine(3, "% Insp: " + String(configuration->getPorcentajeInspiratorio()));
+    display.writeLine(0, "RPM: "        + String(configuration->getRpm()));
+    display.writeLine(1, "Vol Tidal: "  + String(configuration->getMlTidalVolumen()));
+    display.writeLine(3, "% Insp: "     + String(configuration->getPorcentajeInspiratorio()));
   }
 #else
   com.serialRead();
 #endif
+
 }

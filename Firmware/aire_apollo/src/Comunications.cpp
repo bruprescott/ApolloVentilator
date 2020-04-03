@@ -26,8 +26,9 @@ void Comunications::data(String msg[], uint8_t size)
     {
         msgs += "," + msg[i];
     }
-    //send("DATA:" + msgs);
-    send(msgs);
+    send("DATA:" + msgs);
+    delay(5);
+    //send(msgs);
 }
 
 void Comunications::debug(String module, String msg)

@@ -1,21 +1,21 @@
-#include "MksmValve.h"
+#include "cheapValve.h"
 #include <Arduino.h>
 #include "trace.h"
 
-MksmValve::MksmValve(uint8_t pin, uint16_t openDelay, uint16_t closeDelay, bool invertedLogic) :
+cheapValve::cheapValve(uint8_t pin, uint16_t openDelay, uint16_t closeDelay, bool invertedLogic) :
 _pin(pin),_trueState(!invertedLogic),
-_openDelayMS(openDelay/2),_closeDelayMS(closeDelay/2) {;}
+_openDelayMS(openDelay),_closeDelayMS(closeDelay) {;}
 
-bool MksmValve::begin()
+bool cheapValve::begin()
 {
   pinMode(_pin, OUTPUT);
   return true;
 }
 
-void MksmValve::open(uint8_t percent)
+void cheapValve::open(uint8_t percent)
 {
   if(percent > 100) percent = 100;
-  if(percent == 0)  percent = 1; //Hack!
+
   if(_openPercent == 0)//Si estabamos cerrados primero cargamos la bobina de la valvula
   {
       magnetize();
@@ -43,14 +43,14 @@ void MksmValve::open(uint8_t percent)
   //Serial.println("factor: " + String(factor) + " oTime: " + String(_magnetizedTimeMS) + " cTime:" + String(_deMagnetizedTimeMS) + " wTime: " + " cyclems:" + String(_cycleTimeMS) );
 }
 
-void MksmValve::close()
+void cheapValve::close()
 {
   _openPercent = 0;
   demagnetize();
   delay(_closeDelayMS);
 }
 
-void MksmValve::update()
+void cheapValve::update()
 {
   if(!isOpen()) return;
 
@@ -58,6 +58,6 @@ void MksmValve::update()
 
   if      (isMagnetized() && ( timeReference < _deMagnetizedTimeMS ) ) //Si la valvula esta abierta y ya ha pasado el tiempo de estar abierta la cerramos
           demagnetize();
-  else if (!isMagnetized() && (timeReference > _deMagnetizedTimeMS) ) // Si no está abierta y estamos dentro del tiempo de estar abierta la abrimos
+  else if (!isMagnetized() && (timeReference > _deMagnetizedTimeMS) && (timeReference < (_deMagnetizedTimeMS+_magnetizedTimeMS)) ) // Si no está abierta y estamos dentro del tiempo de estar abierta la abrimos
           magnetize();
 }

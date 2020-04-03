@@ -10,6 +10,8 @@
 #define INC_MECHANICAL_VENTILATION_H
 
 #include <PID_v1.h>
+#include <PID_AutoTune_v0.h>
+
 #include <inttypes.h>
 #include "defaults.h"
 #include "ApolloHal.h"
@@ -74,12 +76,88 @@ public:
      * @note This method must be called on the main loop.
      */
     void update(void);
+
+/*
+///Autotune
+double kpmodel=1.5, taup=100, theta[50];
+double outputStart=5;
+double aTuneStep=50, aTuneNoise=1, aTuneStartValue=100;
+unsigned int aTuneLookBack=20;
+
+boolean tuning = false;
+unsigned long  modelTime, serialTime
+
+    void autoTunePressurePID()
+    {
+
+    }
+
+    void DoModel()
+    {
+      //cycle the dead time
+      for(byte i=0 ; i<49 ; i++)
+      {
+        theta[i] = theta[i+1];
+      }
+      //compute the input
+      input = (kpmodel / taup) *(theta[0]-outputStart) + input*(1-1/taup) + ((float)random(-10,10))/100;
+
+    }
+
+    void DoModel()
+    {
+      //cycle the dead time
+      for(byte i=0;i<49;i++)
+      {
+        theta[i] = theta[i+1];
+      }
+      //compute the input
+      input = (kpmodel / taup) *(theta[0]-outputStart) + input*(1-1/taup) + ((float)random(-10,10))/100;
+
+    }
+
+    void changeAutoTune()
+    {
+     if(!tuning)
+      {
+        //Set the output to the desired starting frequency.
+        output=aTuneStartValue;
+        aTune.SetNoiseBand(aTuneNoise);
+        aTune.SetOutputStep(aTuneStep);
+        aTune.SetLookbackSec((int)aTuneLookBack);
+        AutoTuneHelper(true);
+        tuning = true;
+      }
+      else
+      { //cancel autotune
+        aTune.Cancel();
+        tuning = false;
+        AutoTuneHelper(false);
+      }
+    }
+*/
     void setTargetPressure(float p)
     {
       _targetPressure = p;
     }
+
+////////////////////////////
     void    pidCompute();
 
+    void    setP(float p)
+    {
+      _consKp = p;
+    }
+
+    void    setI(float i)
+    {
+      _consKi = i;
+    }
+
+    void    setD(float d)
+    {
+      _consKd = d;
+    }
 
 private:
     /** Initialization. */
@@ -161,8 +239,6 @@ private:
     void calcularCiclo();
 
     void configurationUpdate();
-
-
 
 };
 

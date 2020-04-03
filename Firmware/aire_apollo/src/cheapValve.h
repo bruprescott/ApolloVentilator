@@ -4,10 +4,10 @@
 #include<Arduino.h>
 #include "ApolloValve.h"
 
-class MksmValve : public ApolloValve
+class cheapValve : public ApolloValve
 {
 public:
-  MksmValve(uint8_t pin, uint16_t openDelay = 15 , uint16_t closeDelay = 10 , bool invertedLogic = false);
+  cheapValve(uint8_t pin, uint16_t openDelay = 15 , uint16_t closeDelay = 10 , bool invertedLogic = false);
 
   bool begin();
   void open(uint8_t percent = 100);

@@ -13,10 +13,11 @@
 MechVentilation::MechVentilation(
     ApolloHal *hal,
     ApolloConfiguration *configuration) :
+//    _pidPressure(&_currentPressure, &_inputValvePercent, &_targetPressure, _consKp, _consKi, _consKd,P_ON_M, DIRECT)
     _pidPressure(&_currentPressure, &_inputValvePercent, &_targetPressure, _consKp, _consKi, _consKd, DIRECT)
 {
-    _aggKp=2 , _aggKi=0.1  , _aggKd=0.5;
-    _consKp=5, _consKi=0.05, _consKd=0.10;
+    _aggKp=15 , _aggKi=0.0  , _aggKd=1;
+    _consKp=1, _consKi=0.0, _consKd=0.1;
     _pidPressure.SetTunings(_consKp, _consKi, _consKd);
     this->hal = hal;
     this->configuration = configuration;
@@ -121,15 +122,16 @@ void MechVentilation::insuflationBefore()
      *  @todo Decir a la válvula que se abra
      *
     */
-    this->hal->exitValve()->close();
+    //this->hal->exitValve()->close();
     this->hal->intakeFlowSensor()->resetFlow();
 
-    _targetPressure = 40;
-    _inputValvePercent = 100;
-    this->hal->intakeValve()->open(_inputValvePercent);
+    _targetPressure = 30;
+//    _inputValvePercent = 100;
+    this->hal->intakeValve()->open();
     pidCompute();
     this->stateNext();
 }
+
 void MechVentilation::insufaltionProcess()
 {
     //El proceso de insuflación está en marcha, esperamos al sensor de medida o tiempo de insuflación max
@@ -166,9 +168,9 @@ void MechVentilation::insuflationAfter()
     unsigned long now = millis();
     if ((now - this->lastExecution) >= (this->_cfgSecTimeInsufflation * 1000))
     {
-        _targetPressure = 15;
-        _inputValvePercent = 20;
-        this->hal->intakeValve()->open(_inputValvePercent);
+        _targetPressure = 10;
+        //_inputValvePercent = 20;
+        this->hal->intakeValve()->open();
         pidCompute();
         this->stateNext();
     }
@@ -176,7 +178,7 @@ void MechVentilation::insuflationAfter()
 void MechVentilation::exsufflationBefore()
 {
     /** @todo Abrimos válvulas de salida */
-    this->hal->exitValve()->open(100);
+    //this->hal->exitValve()->open();
     stateNext();
 }
 void MechVentilation::exsufflationProcess()
@@ -245,7 +247,7 @@ void MechVentilation::pidCompute()
 {
 //  if()
 //  {
-/*
+
     double gap = abs(_targetPressure - _currentPressure); //distance away from setpoint
     if (gap < 5)
     {  //we're close to setpoint, use conservative tuning parameters
@@ -256,12 +258,14 @@ void MechVentilation::pidCompute()
        //we're far from setpoint, use aggressive tuning parameters
        _pidPressure.SetTunings(_aggKp, _aggKi, _aggKd);
     }
-*/
+
+
+    //_pidPressure.SetTunings(_consKp, _consKi, _consKd);
     _currentPressure = hal->pressuresSensor()->readCMH2O();
     _pidPressure.Compute();
-    Serial.println("PID: current:" + String(_currentPressure) + " Target:"  + String(_targetPressure) + " Output:" + String(_inputValvePercent) );
-    if(_inputValvePercent > 100) _inputValvePercent = 100;
-    hal->intakeValve()->open(_inputValvePercent);
-
+    if(_inputValvePercent > 100)  _inputValvePercent = 100;
+    if(_inputValvePercent < 0  )  _inputValvePercent =   0;
+    hal->exitValve()->open(100-_inputValvePercent);// invertido por ser el cierre de la salida.
+    //Serial.println("PID: current:" + String(_currentPressure) + " Target:"  + String(_targetPressure) + " Output:" + String(_inputValvePercent) );
 //  }
 }
